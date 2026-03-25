@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Agri Feedback Portal</title>
+    <link rel="icon" type="image/png" href="assets/logo/agri-logo.png">
+    <link rel="shortcut icon" href="assets/logo/agri-logo.png" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card" style="margin-top: 30px;">
+            <div style="text-align: center; margin-bottom: 15px;">
+                <img src="assets/logo/agri-logo.png" alt="Agri Portal Logo" style="height: 80px;">
+            </div>
+            <h2 style="text-align: center;" data-i18n="register">Register</h2>
+            <div id="alert-message"></div>
+            <form id="register-form">
+                <div class="form-group">
+                    <label data-i18n="nameLabel">Name</label>
+                    <input type="text" id="name" required data-i18n="namePlaceholder" placeholder="Full Name">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="phoneLabel">Phone Number</label>
+                    <input type="text" id="phone" required data-i18n="phonePlaceholder"
+                        placeholder="Enter 10-digit number">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="villageLabel">Village</label>
+                    <input type="text" id="village" required data-i18n="villagePlaceholder" placeholder="Your Village">
+                </div>
+                <div class="form-group">
+                    <label data-i18n="passwordLabel">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn" data-i18n="register">Register</button>
+            </form>
+            <p style="text-align: center; margin-top: 15px;">
+                <span data-i18n="haveAccount">Already have an account?</span> <a href="login.html"
+                    data-i18n="login">Login</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const phone = document.getElementById('phone').value;
+            const village = document.getElementById('village').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(`${API_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, phone, village, password, role: 'farmer' }) // default to farmer
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data));
+                    window.location.href = 'dashboard.html';
+                } else {
+                    showAlert(data.message || 'Registration failed');
+                }
+            } catch (error) {
+                showAlert('Network error. Please try again.');
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+
+</html>

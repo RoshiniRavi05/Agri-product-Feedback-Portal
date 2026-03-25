@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products - Agri Feedback Portal</title>
+    <link rel="icon" type="image/png" href="assets/logo/agri-logo.png">
+    <link rel="shortcut icon" href="assets/logo/agri-logo.png" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <nav class="navbar" style="justify-content: space-between;">
+        <div class="logo-section">
+            <img src="assets/logo/agri-logo.png" alt="Agri Portal Logo" class="logo">
+            <span class="site-title" data-i18n="title">Agri Portal</span>
+        </div>
+        <div>
+            <a href="dashboard.html" style="color: white; margin-right: 15px; text-decoration: underline;"
+                data-i18n="dashboard">Dashboard</a>
+            <span id="nav-username" style="margin-right: 15px;"></span>
+            <a href="#" id="logout-btn" data-i18n="logout" style="color: white; text-decoration: underline;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: 1200px;">
+        <h2 style="text-align: center; margin-bottom: 30px;" data-i18n="productCatalog">Product Catalog</h2>
+
+        <div id="product-grid" class="product-grid">
+            <p style="text-align: center; width: 100%;">Loading products...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            checkAuth(); // Redirects to login if not authenticated
+
+            try {
+                const res = await fetch(`${API_URL}/products`);
+                const products = await res.json();
+                const grid = document.getElementById('product-grid');
+
+                if (products.length === 0) {
+                    grid.innerHTML = '<p style="text-align: center; width: 100%;">No products found.</p>';
+                    return;
+                }
+
+                grid.innerHTML = products.map(p => `
+                    <div class="product-card">
+                        <div class="product-image-container">
+                            <img src="${p.image_path || 'assets/logo/agri-logo.png'}" alt="${p.product_name}" class="product-image">
+                        </div>
+                        <div class="product-info">
+                            <span class="product-badge">[${p.product_type}]</span>
+                            <h3 class="product-name">${p.product_name}</h3>
+                            <p class="product-desc" style="display: none;">${p.description || ''}</p>
+                            <div class="product-actions">
+                                <button class="btn btn-secondary view-details-btn" onclick="toggleDetails(this)">View Product</button>
+                                <a href="submit-feedback.html?product=${p._id}" class="btn">Submit Feedback</a>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('product-grid').innerHTML = '<p style="color: red; text-align: center; width: 100%;">Error loading products.</p>';
+            }
+        });
+
+        // Toggle visibility of the product description
+        function toggleDetails(btn) {
+            const desc = btn.closest('.product-info').querySelector('.product-desc');
+            if (desc.style.display === 'none') {
+                desc.style.display = 'block';
+                btn.textContent = 'Hide Details';
+            } else {
+                desc.style.display = 'none';
+                btn.textContent = 'View Details';
+            }
+        }
+    </script>
+</body>
+
+</html>

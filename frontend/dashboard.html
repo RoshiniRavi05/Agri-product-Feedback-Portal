@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Agri Feedback Portal</title>
+    <link rel="icon" type="image/png" href="assets/logo/agri-logo.png">
+    <link rel="shortcut icon" href="assets/logo/agri-logo.png" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <nav class="navbar" style="justify-content: space-between;">
+        <div class="logo-section">
+            <img src="assets/logo/agri-logo.png" alt="Agri Portal Logo" class="logo">
+            <span class="site-title" data-i18n="title">Agri Portal</span>
+        </div>
+        <div>
+            <a href="products.html" style="color: white; margin-right: 15px; text-decoration: underline;"
+                data-i18n="productCatalog">Products</a>
+            <span id="nav-username" style="margin-right: 15px;"></span>
+            <a href="#" id="logout-btn" data-i18n="logout" style="color: white; text-decoration: underline;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 data-i18n="myComplaints">My Complaints</h2>
+        </div>
+
+        <div id="alert-message"></div>
+        <div id="complaints-list">
+            <p>Loading complaints...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            checkAuth();
+
+            try {
+                const response = await fetch(`${API_URL}/reviews/my`, {
+                    headers: {
+                        'Authorization': `Bearer ${getToken()}`
+                    }
+                });
+
+                const complaints = await response.json();
+                const listDiv = document.getElementById('complaints-list');
+
+                if (response.ok) {
+                    if (complaints.length === 0) {
+                        listDiv.innerHTML = `<p data-i18n="noComplaints">${translations[getLanguage()].noComplaints}</p>`;
+                    } else {
+                        const trans = translations[getLanguage()];
+                        listDiv.innerHTML = complaints.map(c => `
+              <div class="card complaint-card">
+                <h3>Product: ${c.product_id ? c.product_id.product_name : 'Unknown'} (${c.product_id ? c.product_id.brand : ''})</h3>
+                <p><strong>${trans.statusText}</strong> Submitted on ${new Date(c.timestamp).toLocaleDateString()}</p>
+                <p><strong>${trans.typeLabel}</strong> <span style="text-transform: capitalize;">${trans['type' + c.feedback_type.charAt(0).toUpperCase() + c.feedback_type.slice(1)] || c.feedback_type}</span></p>
+                <p style="margin-top: 10px; font-weight: bold;">${c.review_title ? c.review_title : ''}</p>
+                <p style="margin-top: 5px; font-style: italic;">"${c.feedback_text}"</p>
+                ${c.image_attachment ? `<img src="http://localhost:5000${c.image_attachment}" alt="Feedback Image">` : ''}
+              </div>
+            `).join('');
+                    }
+                } else {
+                    showAlert(complaints.message || 'Failed to fetch complaints');
+                }
+            } catch (error) {
+                document.getElementById('complaints-list').innerHTML = '<p>Error loading complaints.</p>';
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+
+</html>

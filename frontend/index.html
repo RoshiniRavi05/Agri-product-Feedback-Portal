@@ -1,0 +1,43 @@
+<!DOCTYPE strict>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agri Feedback Portal - Home</title>
+    <link rel="icon" type="image/png" href="assets/logo/agri-logo.png">
+    <link rel="shortcut icon" href="assets/logo/agri-logo.png" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="card" style="text-align: center; margin-top: 50px;">
+
+            <!-- Language Selection -->
+            <div id="language-selector"
+                style="margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
+                <h2 style="margin-bottom: 15px;">Select Language</h2>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="setLanguage('en')" class="btn"
+                        style="width: auto; padding: 10px 20px; font-size: 1rem;">[ Continue in English ]</button>
+                    <button onclick="setLanguage('ta')" class="btn btn-secondary"
+                        style="width: auto; padding: 10px 20px; font-size: 1rem;">[ தமிழில் தொடரவும் ]</button>
+                </div>
+            </div>
+
+            <img src="assets/logo/agri-logo.png" alt="Agri Portal Logo" style="height: 100px; margin-bottom: 20px;">
+            <h1 data-i18n="title">Agri Feedback Portal</h1>
+            <p data-i18n="subtitle" style="font-size: 1.2rem; margin-bottom: 20px;">
+                Empowering farmers to report issues with seeds, fertilizers, and farming tools.
+                <br>
+                விவசாய பொருட்கள் பற்றிய புகார்களை பதிவு செய்யும் தளம்.
+            </p>
+            <a href="login.html" class="btn" data-i18n="login">Login</a>
+            <a href="register.html" class="btn btn-secondary" style="margin-top:15px;" data-i18n="register">Register</a>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

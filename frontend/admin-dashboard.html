@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Agri Portal</title>
+    <link rel="icon" type="image/png" href="assets/logo/agri-logo.png">
+    <link rel="shortcut icon" href="assets/logo/agri-logo.png" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <nav class="navbar" style="justify-content: space-between;">
+        <div class="logo-section">
+            <img src="assets/logo/agri-logo.png" alt="Agri Portal Logo" class="logo">
+            <span class="site-title" data-i18n="adminTitle">Admin Dashboard</span>
+        </div>
+        <div>
+            <a href="products.html" style="color: white; margin-right: 15px; text-decoration: underline;"
+                data-i18n="productCatalog">Products</a>
+            <span id="nav-username" style="margin-right: 15px;"></span>
+            <a href="#" id="logout-btn" data-i18n="adminLogout"
+                style="color: white; text-decoration: underline;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container" style="max-width: 1000px;">
+
+        <!-- Stats Row -->
+        <div class="stats-grid" id="stats-container">
+            <div class="stat-card">
+                <h3 data-i18n="totalComplaints">Total Complaints</h3>
+                <p id="total-complaints">0</p>
+            </div>
+            <div class="stat-card">
+                <h3 data-i18n="totalProducts">Total Products</h3>
+                <p id="total-products">0</p>
+            </div>
+        </div>
+
+        <!-- Quality Alerts Row -->
+        <div class="card" id="alert-card-container" style="border-left: 5px solid var(--accent-color);">
+            <h2 style="color: var(--accent-color);">
+                ⚠️ <span data-i18n="qualityAlerts">Quality Alerts (Defective Products)</span>
+                <span id="alert-badge"
+                    style="display:none; background:red; color:white; font-size:0.8rem; padding:3px 8px; border-radius:10px; vertical-align: middle; margin-left: 10px;">New
+                    Active Alert</span>
+            </h2>
+            <div id="alerts-list">
+                <p>Loading alerts...</p>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+            <div class="card" style="flex: 1; min-width: 300px;">
+                <h2>Reviews by Category</h2>
+                <canvas id="categoryChart"></canvas>
+            </div>
+            <div class="card" style="flex: 1; min-width: 300px;">
+                <h2>Most Reviewed Products</h2>
+                <canvas id="productsChart"></canvas>
+            </div>
+            <div class="card" style="flex: 1; min-width: 300px;">
+                <h2>Average Ratings</h2>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="background: var(--primary-color); color: white;">
+                                <th style="padding: 10px;">Product Name</th>
+                                <th style="padding: 10px;">Avg Rating</th>
+                            </tr>
+                        </thead>
+                        <tbody id="average-ratings-list">
+                            <tr>
+                                <td colspan="2">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Product Form -->
+        <div class="card">
+            <h2>Add New Product</h2>
+            <div id="product-alert"></div>
+            <form id="add-product-form" enctype="multipart/form-data">
+                <div class="form-group">
+                    <input type="text" id="p_name" placeholder="Product Name" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="p_brand" placeholder="Brand" value="Bannari Amman Sugars Ltd." required>
+                </div>
+                <div class="form-group" style="display: flex; gap: 10px;">
+                    <select id="p_category" required style="flex: 1;">
+                        <option value="">Select Category...</option>
+                        <option value="Seed">Seed</option>
+                        <option value="Fertilizer">Fertilizer</option>
+                        <option value="Pesticide">Pesticide</option>
+                        <option value="Tool">Tool</option>
+                    </select>
+                    <select id="p_type" required style="flex: 1;">
+                        <option value="">Select Product Type...</option>
+                        <option value="Liquid">Liquid</option>
+                        <option value="Powder">Powder</option>
+                        <option value="Common">Common</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label style="font-size: 0.9rem; margin-bottom: 5px; display: block;">Product Image
+                        (Optional)</label>
+                    <input type="file" id="p_image" accept="image/*">
+                </div>
+                <div class="form-group">
+                    <textarea id="p_description" placeholder="Product Description (Optional)" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-secondary">Add Product</button>
+            </form>
+        </div>
+
+        <!-- All Complaints -->
+        <div class="card">
+            <h2>All Recent Complaints</h2>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                    <thead>
+                        <tr style="background: var(--primary-color); color: white;">
+                            <th style="padding: 10px;">Date</th>
+                            <th style="padding: 10px;">Farmer</th>
+                            <th style="padding: 10px;">Product</th>
+                            <th style="padding: 10px;">Type</th>
+                            <th style="padding: 10px;">Reviews</th>
+                        </tr>
+                    </thead>
+                    <tbody id="all-complaints-list">
+                        <tr>
+                            <td colspan="5">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            checkAuth();
+            checkAdmin();
+
+            const token = getToken();
+            const headers = { 'Authorization': `Bearer ${token}` };
+
+            // Load Analytics & Charts
+            try {
+                const res = await fetch(`${API_URL}/admin/analytics`, { headers });
+                const data = await res.json();
+
+                if (res.ok) {
+                    document.getElementById('total-complaints').textContent = data.totalReviews;
+                    document.getElementById('total-products').textContent = data.totalProducts;
+
+                    // Render Category Chart
+                    const catCtx = document.getElementById('categoryChart').getContext('2d');
+                    new Chart(catCtx, {
+                        type: 'pie',
+                        data: {
+                            labels: data.reviewsByCategory.map(c => c._id),
+                            datasets: [{
+                                data: data.reviewsByCategory.map(c => c.count),
+                                backgroundColor: ['#2E7D32', '#FF9800', '#F44336', '#2196F3']
+                            }]
+                        }
+                    });
+
+                    // Render Products Bar Chart
+                    const prodCtx = document.getElementById('productsChart').getContext('2d');
+                    new Chart(prodCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: data.mostReviewed.map(p => p.product_name), // populated via DB
+                            datasets: [{
+                                label: '# of Reviews',
+                                data: data.mostReviewed.map(p => p.count),
+                                backgroundColor: '#FF5722'
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: { beginAtZero: true }
+                            }
+                        }
+                    });
+
+                    // Render Average Ratings List
+                    const ratingsList = document.getElementById('average-ratings-list');
+                    if (data.averageRatings && data.averageRatings.length > 0) {
+                        ratingsList.innerHTML = data.averageRatings.map(r => `
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 10px;">${r.product_name} <br><small>${r.brand}</small></td>
+                                <td style="padding: 10px; font-weight: bold; color: ${r.avgRating >= 4 ? '#2E7D32' : r.avgRating >= 2.5 ? '#FF9800' : '#d32f2f'};">
+                                    ${r.avgRating.toFixed(1)} ★
+                                </td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        ratingsList.innerHTML = '<tr><td colspan="2">No ratings submitted yet.</td></tr>';
+                    }
+
+                }
+            } catch (error) {
+                console.error('Error fetching analytics', error);
+            }
+
+            // Load Alerts (Defective products)
+            try {
+                const resAlerts = await fetch(`${API_URL}/admin/alerts`, { headers });
+                const alertsData = await resAlerts.json();
+                const alertList = document.getElementById('alerts-list');
+                const alertBadge = document.getElementById('alert-badge');
+
+                if (resAlerts.ok && alertsData.length > 0) {
+                    const activeAlerts = alertsData.filter(a => a.status === 'active');
+                    if (activeAlerts.length > 0) {
+                        alertBadge.style.display = 'inline-block';
+                        document.getElementById('alert-card-container').style.borderLeft = '5px solid red';
+                    }
+
+                    alertList.innerHTML = `
+                      <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                          <thead>
+                            <tr style="background: #ffebee; color: #b71c1c;">
+                                <th style="padding: 10px; border-bottom: 2px solid #ffcdd2;">Product Name</th>
+                                <th style="padding: 10px; border-bottom: 2px solid #ffcdd2;">Review Count</th>
+                                <th style="padding: 10px; border-bottom: 2px solid #ffcdd2;">Alert Message</th>
+                                <th style="padding: 10px; border-bottom: 2px solid #ffcdd2;">Status</th>
+                                <th style="padding: 10px; border-bottom: 2px solid #ffcdd2;">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            ${alertsData.map(a => `
+                              <tr style="border-bottom: 1px solid #eee;">
+                                  <td style="padding: 10px;">${a.product ? a.product.product_name : 'Unknown Product'}</td>
+                                  <td style="padding: 10px; font-weight: bold;">${a.review_count}</td>
+                                  <td style="padding: 10px;">${a.message}</td>
+                                  <td style="padding: 10px;">
+                                      <span style="padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; background: ${a.status === 'active' ? '#ffcdd2' : '#c8e6c9'}; color: ${a.status === 'active' ? '#c62828' : '#2e7d32'};">
+                                        ${a.status.toUpperCase()}
+                                      </span>
+                                  </td>
+                                  <td style="padding: 10px;">
+                                      ${a.status === 'active' ? `<button onclick="resolveAlert('${a._id}')" class="btn btn-secondary" style="margin: 0; padding: 5px 10px; font-size: 0.8rem; width: auto;">Resolve</button>` : '✓'}
+                                  </td>
+                              </tr>
+                            `).join('')}
+                          </tbody>
+                        </table>
+                      </div>
+                    `;
+                } else {
+                    alertList.innerHTML = '<p>No quality alerts triggered at this time.</p>';
+                }
+            } catch (error) {
+                console.error(error);
+            }
+
+            // Load All Reviews List
+            try {
+                const resComplaints = await fetch(`${API_URL}/admin/reviews`, { headers });
+                const compData = await resComplaints.json();
+                const tbody = document.getElementById('all-complaints-list');
+
+                if (resComplaints.ok && compData.length > 0) {
+                    tbody.innerHTML = compData.map(c => `
+                <tr style="border-bottom: 1px solid #eee;">
+                    <td style="padding: 10px;">${new Date(c.timestamp).toLocaleDateString()}</td>
+                    <td style="padding: 10px;">${c.user_id ? c.user_id.name : 'Unknown User'}<br><small>${c.user_id ? c.user_id.phone : ''}</small></td>
+                    <td style="padding: 10px;">${c.product_id ? c.product_id.product_name : 'Unknown'}<br><small>${c.product_id ? c.product_id.brand : ''}</small></td>
+                    <td style="padding: 10px; text-transform: capitalize;">
+                        ${c.feedback_type} <br>
+                        <small style="color: #666;">Cat: ${c.complaint_category}</small> <br>
+                        <small style="color: #FF9800; font-weight: bold;">Rating: ${c.rating} ★</small>
+                    </td>
+                    <td style="padding: 10px;">
+                      <strong>${c.review_title ? c.review_title : ''}</strong><br>
+                      ${c.feedback_text}
+                      ${c.image_attachment ? `<br><a href="http://localhost:5000${c.image_attachment}" target="_blank">🖼️ View Image</a>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5">No reviews found.</td></tr>';
+                }
+            } catch (error) {
+                console.error(error);
+            }
+
+            // Add Product Form Handler
+            document.getElementById('add-product-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const formData = new FormData();
+                const brandValue = document.getElementById('p_brand').value;
+                formData.append('product_name', document.getElementById('p_name').value);
+                formData.append('brand', brandValue);
+                formData.append('category', document.getElementById('p_category').value);
+                formData.append('product_type', document.getElementById('p_type').value);
+                formData.append('manufacturer', brandValue); // Duplicate Brand as Manufacturer
+                formData.append('description', document.getElementById('p_description').value);
+
+                const imageFile = document.getElementById('p_image').files[0];
+                if (imageFile) {
+                    formData.append('image', imageFile);
+                }
+
+                try {
+                    const res = await fetch(`${API_URL}/products`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                            // Do NOT set Content-Type header when sending FormData; the browser sets it with the boundary automatically
+                        },
+                        body: formData
+                    });
+                    if (res.ok) {
+                        alert('Product added successfully!');
+                        window.location.reload();
+                    } else {
+                        const err = await res.json();
+                        alert(err.message || 'Error adding product');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Network error');
+                }
+            });
+        });
+
+        // Global function to resolve alert
+        async function resolveAlert(alertId) {
+            if (!confirm("Are you sure you want to mark this quality alert as resolved?")) return;
+
+            try {
+                const token = getToken();
+                const res = await fetch(`${API_URL}/admin/alerts/${alertId}/resolve`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.ok) {
+                    alert('Alert marked as resolved.');
+                    location.reload();
+                } else {
+                    const data = await res.json();
+                    alert(data.message || 'Error resolving alert.');
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Network error.");
+            }
+        }
+    </script>
+</body>
+
+</html>

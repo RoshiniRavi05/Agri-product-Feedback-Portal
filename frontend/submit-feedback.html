@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Feedback - Agri Portal</title>
+    <link rel="icon" type="image/png" href="assets/logo/agri-logo.png">
+    <link rel="shortcut icon" href="assets/logo/agri-logo.png" type="image/png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <nav class="navbar" style="justify-content: space-between;">
+        <div class="logo-section">
+            <img src="assets/logo/agri-logo.png" alt="Agri Portal Logo" class="logo">
+            <span class="site-title" data-i18n="title">Agri Portal</span>
+        </div>
+        <div>
+            <a href="products.html" style="color: white; margin-right: 15px; text-decoration: underline;"
+                data-i18n="productCatalog">Products</a>
+            <a href="dashboard.html" data-i18n="backLabel"
+                style="color: white; margin-right: 15px; text-decoration: underline;">Back</a>
+            <a href="#" id="logout-btn" data-i18n="logout" style="color: white; text-decoration: underline;">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <h2 data-i18n="submitComplaintTitle">Submit Feedback</h2>
+            <div id="alert-message"></div>
+
+            <form id="feedback-form">
+                <!-- Input Method Selection -->
+                <div class="form-group" style="margin-bottom: 25px;">
+                    <label data-i18n="selectTypeLabel">Select Feedback Type</label>
+                    <select id="complaint_type" required>
+                        <option value="text" data-i18n="typeText">Text</option>
+                        <option value="voice" data-i18n="typeVoice">Voice</option>
+                        <option value="image" data-i18n="typeImage">Image</option>
+                    </select>
+                </div>
+
+                <!-- Hidden Product ID -->
+                <input type="hidden" id="product_id" required>
+
+                <div class="form-group">
+                    <label>Rate Product (Optional)</label>
+                    <div class="rating-container" id="star-rating">
+                        <input type="radio" id="star5" name="rating" value="5"><label for="star5">★</label>
+                        <input type="radio" id="star4" name="rating" value="4"><label for="star4">★</label>
+                        <input type="radio" id="star3" name="rating" value="3"><label for="star3">★</label>
+                        <input type="radio" id="star2" name="rating" value="2"><label for="star2">★</label>
+                        <input type="radio" id="star1" name="rating" value="1"><label for="star1">★</label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Review Title</label>
+                    <select id="complaint_category">
+                        <option value="Other">Other / General Feedback</option>
+                        <option value="Quality">Quality Issue</option>
+                        <option value="Effectiveness">Effectiveness / Yield Issue</option>
+                        <option value="Packaging">Packaging Issue</option>
+                        <option value="Fake Product">Suspected Fake Product</option>
+                    </select>
+                </div>
+
+                <!-- Text/Voice Input Region -->
+                <div class="form-group" id="text-input-group">
+                    <label data-i18n="complaintDetailsLabel">User Feedback</label>
+                    <textarea id="complaint_text" rows="5" data-i18n="complaintDetailsPlaceholder"
+                        placeholder="Write your feedback here..."></textarea>
+
+                    <button type="button" id="record-btn" class="btn btn-secondary"
+                        style="display: none; margin-top: 10px;" data-i18n="startVoiceOptions">
+                        Start Voice Recording
+                    </button>
+                </div>
+
+                <!-- Image Upload Region -->
+                <div class="form-group" id="image-upload-group" style="display: none;">
+                    <label data-i18n="uploadImageLabel">Upload Product Photo</label>
+                    <input type="file" id="complaint_image" accept="image/*">
+                    <p data-i18n="uploadImageDesc" style="font-size: 0.9rem; color: #666; margin-top: 5px;">Take a
+                        clear photo of the seed packet or fertilizer bag showing the brand.</p>
+                </div>
+
+                <button type="submit" class="btn" data-i18n="submitBtn">Submit Feedback</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            checkAuth();
+
+            const typeSelect = document.getElementById('complaint_type');
+            const textGroup = document.getElementById('text-input-group');
+            const imageGroup = document.getElementById('image-upload-group');
+            const recordBtn = document.getElementById('record-btn');
+            const complaintText = document.getElementById('complaint_text');
+
+            // Check for auto-populated product param
+            const urlParams = new URLSearchParams(window.location.search);
+            const preSelectProductId = urlParams.get('product');
+            if (preSelectProductId) {
+                document.getElementById('product_id').value = preSelectProductId;
+            } else {
+                showAlert("No product selected. Please select a product from the catalog first.");
+                setTimeout(() => window.location.href = 'products.html', 2500);
+            }
+
+            // Handle Input Type Switching
+            typeSelect.addEventListener('change', (e) => {
+                const val = e.target.value;
+                if (val === 'text') {
+                    textGroup.style.display = 'block';
+                    imageGroup.style.display = 'none';
+                    recordBtn.style.display = 'none';
+                    complaintText.disabled = false;
+                } else if (val === 'voice') {
+                    textGroup.style.display = 'block';
+                    imageGroup.style.display = 'none';
+                    recordBtn.style.display = 'flex';
+                    complaintText.disabled = false; // allow editing voice output
+                } else if (val === 'image') {
+                    textGroup.style.display = 'block'; // Need description for image too
+                    imageGroup.style.display = 'block';
+                    recordBtn.style.display = 'none';
+                }
+            });
+
+            // Web Speech API Integration
+            let recognition = null;
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                recognition = new SpeechRecognition();
+
+                // Set language dynamically
+                const selectedLanguage = getLanguage();
+                if (selectedLanguage === 'ta') {
+                    recognition.lang = 'ta-IN';
+                } else {
+                    recognition.lang = 'en-IN';
+                }
+
+                recognition.continuous = true;
+                recognition.interimResults = true;
+
+                recognition.onstart = () => {
+                    recordBtn.textContent = '🛑 ' + translations[getLanguage()].stopVoiceOptions;
+                    recordBtn.classList.add('recording');
+                };
+
+                recognition.onresult = (event) => {
+                    let finalTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            finalTranscript += event.results[i][0].transcript;
+                        }
+                    }
+                    if (finalTranscript) {
+                        complaintText.value = (complaintText.value + ' ' + finalTranscript).trim();
+                    }
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('Speech recognition error', event.error);
+                    showAlert(translations[getLanguage()].voiceRecordingFailed + ': ' + event.error);
+                    stopRecordingUI();
+                };
+
+                recognition.onend = () => {
+                    stopRecordingUI();
+                };
+
+                function stopRecordingUI() {
+                    recordBtn.textContent = '🎤 ' + translations[getLanguage()].startVoiceOptions;
+                    recordBtn.classList.remove('recording');
+                }
+
+                recordBtn.addEventListener('click', () => {
+                    if (recordBtn.classList.contains('recording')) {
+                        recognition.stop();
+                    } else {
+                        recognition.start();
+                    }
+                });
+            } else {
+                recordBtn.disabled = true;
+                recordBtn.textContent = translations[getLanguage()].voiceNotSupported;
+            }
+
+            // Form Submission logic
+            document.getElementById('feedback-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const type = typeSelect.value;
+                const productId = document.getElementById('product_id').value;
+                const text = complaintText.value;
+                const category = document.getElementById('complaint_category').value;
+                const imageFile = document.getElementById('complaint_image').files[0];
+
+                // Get Star Rating
+                let rating = 0;
+                const ratingRadios = document.getElementsByName('rating');
+                for (let radio of ratingRadios) {
+                    if (radio.checked) {
+                        rating = radio.value;
+                        break;
+                    }
+                }
+
+                // Title is now derived from the dropdown selection
+                const title = category;
+
+                if (!productId) {
+                    return showAlert(translations[getLanguage()].selectProductAlert);
+                }
+
+                if (type !== 'image' && !text.trim()) {
+                    return showAlert(translations[getLanguage()].enterComplaintDetailsAlert);
+                }
+
+                if (type === 'image' && !imageFile) {
+                    return showAlert(translations[getLanguage()].uploadImageAlert);
+                }
+
+                const formData = new FormData();
+                formData.append('feedback_type', type);
+                formData.append('product_id', productId);
+                formData.append('review_title', title);
+                formData.append('feedback_text', text);
+                formData.append('complaint_category', category); // legacy naming mapping kept
+                formData.append('rating', rating);
+
+                if (type === 'image' && imageFile) {
+                    formData.append('image', imageFile);
+                }
+
+                try {
+                    const btn = e.target.querySelector('button[type="submit"]');
+                    btn.disabled = true;
+                    btn.textContent = translations[getLanguage()].submittingBtn;
+
+                    const response = await fetch(`${API_URL}/reviews`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${getToken()}`
+                            // Do NOT set Content-Type, browser will set boundary for multipart/form-data
+                        },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    if (response.ok) {
+                        alert(translations[getLanguage()].successSubmit);
+                        window.location.href = 'dashboard.html';
+                    } else {
+                        showAlert(data.message || translations[getLanguage()].submissionFailed);
+                        btn.disabled = false;
+                        btn.textContent = translations[getLanguage()].submitBtn;
+                    }
+                } catch (error) {
+                    showAlert(translations[getLanguage()].networkError);
+                    console.error(error);
+                    const btn = e.target.querySelector('button[type="submit"]');
+                    btn.disabled = false;
+                    btn.textContent = translations[getLanguage()].submitBtn;
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
