@@ -109,6 +109,43 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
 
+// Temporary fast-track seeding endpoint
+app.get('/api/trigger-seed-reviews', async (req, res) => {
+    try {
+        const User = require('./backend/models/User');
+        const Product = require('./backend/models/Product');
+        const Review = require('./backend/models/Review');
+
+        const farmers = await User.find({ role: 'farmer' });
+        const products = await Product.find({});
+        
+        if (farmers.length === 0 || products.length === 0) {
+            return res.status(400).send('No farmers or products found');
+        }
+
+        const reviewsToCreate = [];
+        const categories = ['Quality', 'Effectiveness', 'Packaging', 'Fake Product', 'Other'];
+        
+        for (let i = 0; i < 350; i++) {
+            reviewsToCreate.push({
+                user_id: farmers[Math.floor(Math.random() * farmers.length)]._id,
+                product_id: products[Math.floor(Math.random() * products.length)]._id,
+                rating: Math.floor(Math.random() * 5) + 1,
+                review_title: categories[Math.floor(Math.random() * categories.length)],
+                feedback_text: 'This is a system generated test feedback for analyzing platform data.',
+                feedback_type: 'text',
+                complaint_category: categories[Math.floor(Math.random() * categories.length)],
+                timestamp: new Date()
+            });
+        }
+
+        await Review.insertMany(reviewsToCreate);
+        res.send('Successfully generated 350 reviews!');
+    } catch (error) {
+        res.status(500).send(error.message);
+    }
+});
+
 // Serve frontend static files
 const frontendPath = path.join(__dirname, 'frontend-react', 'dist');
 app.use(express.static(frontendPath));
