@@ -110,7 +110,13 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/users', userRoutes);
 
 // Serve frontend static files
-app.use(express.static(path.join(__dirname, 'frontend')));
+const frontendPath = path.join(__dirname, 'frontend-react', 'dist');
+app.use(express.static(frontendPath));
+
+// Fallback to index.html for Single Page Applications (React Router)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
