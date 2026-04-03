@@ -127,7 +127,7 @@ const ReviewList = ({ adminView = false, searchEnabled = false }) => {
                                     {c.image_attachment && (
                                         <>
                                             <br />
-                                            <a href={`${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000'}${c.image_attachment}`} target="_blank" rel="noreferrer">
+                                            <a href={import.meta.env.PROD ? c.image_attachment : `http://localhost:5000${c.image_attachment}`} target="_blank" rel="noreferrer">
                                                 🖼️ View Image
                                             </a>
                                         </>
