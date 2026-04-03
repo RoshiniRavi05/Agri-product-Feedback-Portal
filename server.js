@@ -114,7 +114,7 @@ const frontendPath = path.join(__dirname, 'frontend-react', 'dist');
 app.use(express.static(frontendPath));
 
 // Fallback to index.html for Single Page Applications (React Router)
-app.get('*', (req, res) => {
+app.get('/*', (req, res) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
