@@ -133,6 +133,28 @@ const resolveAlert = async (req, res) => {
     }
 };
 
+// @desc    Acknowledge a review and add admin comment
+// @route   PUT /api/admin/reviews/:id/acknowledge
+// @access  Private/Admin
+const acknowledgeReview = async (req, res) => {
+    try {
+        const review = await Review.findById(req.params.id);
+
+        if (!review) {
+            return res.status(404).json({ message: 'Review not found' });
+        }
+
+        review.is_acknowledged = true;
+        review.admin_comment = req.body.admin_comment || '';
+        review.acknowledged_at = new Date();
+        await review.save();
+
+        res.json({ message: 'Review acknowledged successfully', review });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
 // @desc    Get all farmers
 // @route   GET /api/admin/farmers
 // @access  Private/Admin
@@ -148,6 +170,7 @@ const getAllFarmers = async (req, res) => {
 };
 
 router.route('/reviews').get(protect, admin, getAllReviews);
+router.route('/reviews/:id/acknowledge').put(protect, admin, acknowledgeReview);
 router.route('/alerts').get(protect, admin, getQualityAlerts);
 router.route('/alerts/:id/resolve').put(protect, admin, resolveAlert);
 router.route('/analytics').get(protect, admin, getAnalytics);

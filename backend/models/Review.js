@@ -46,6 +46,18 @@ const reviewSchema = new mongoose.Schema({
     timestamp: {
         type: Date,
         default: Date.now
+    },
+    is_acknowledged: {
+        type: Boolean,
+        default: false
+    },
+    admin_comment: {
+        type: String,
+        default: ''
+    },
+    acknowledged_at: {
+        type: Date,
+        default: null
     }
 }, { timestamps: true });
 

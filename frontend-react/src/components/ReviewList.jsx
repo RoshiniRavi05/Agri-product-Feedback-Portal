@@ -11,6 +11,9 @@ const ReviewList = ({ adminView = false, searchEnabled = false }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
+    // Acknowledge state: { [reviewId]: { comment, submitting, expanded } }
+    const [ackState, setAckState] = useState({});
+
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
     const ratingParam = queryParams.get('rating');
@@ -34,6 +37,35 @@ const ReviewList = ({ adminView = false, searchEnabled = false }) => {
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, categoryFilter]);
+
+    const handleAcknowledge = async (reviewId) => {
+        const comment = ackState[reviewId]?.comment || '';
+        setAckState(prev => ({ ...prev, [reviewId]: { ...prev[reviewId], submitting: true } }));
+        try {
+            await api.put(`/admin/reviews/${reviewId}/acknowledge`, { admin_comment: comment });
+            // Update the review in local state
+            setReviews(prev => prev.map(r =>
+                r._id === reviewId
+                    ? { ...r, is_acknowledged: true, admin_comment: comment, acknowledged_at: new Date().toISOString() }
+                    : r
+            ));
+            setAckState(prev => ({ ...prev, [reviewId]: { comment: '', submitting: false, expanded: false } }));
+        } catch (err) {
+            alert('Failed to acknowledge review. Please try again.');
+            setAckState(prev => ({ ...prev, [reviewId]: { ...prev[reviewId], submitting: false } }));
+        }
+    };
+
+    const toggleAckPanel = (reviewId) => {
+        setAckState(prev => ({
+            ...prev,
+            [reviewId]: {
+                ...prev[reviewId],
+                expanded: !prev[reviewId]?.expanded,
+                comment: prev[reviewId]?.comment || ''
+            }
+        }));
+    };
 
     if (loading) return <div>Loading reviews...</div>;
 
@@ -60,6 +92,9 @@ const ReviewList = ({ adminView = false, searchEnabled = false }) => {
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = filteredReviews.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(filteredReviews.length / itemsPerPage);
+
+    // Column count for colspan
+    const colCount = adminView ? 6 : 5;
 
     return (
         <div>
@@ -96,48 +131,169 @@ const ReviewList = ({ adminView = false, searchEnabled = false }) => {
                             <th style={{ padding: '10px' }}>Product</th>
                             <th style={{ padding: '10px' }}>Type / Rating</th>
                             <th style={{ padding: '10px' }}>Review details</th>
+                            <th style={{ padding: '10px' }}>Acknowledgement</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {currentItems.map(c => (
-                            <tr key={c._id} style={{ borderBottom: '1px solid #eee' }}>
-                                <td style={{ padding: '10px' }}>{new Date(c.timestamp).toLocaleDateString()}</td>
+                        {currentItems.map(c => {
+                            const isExpanded = ackState[c._id]?.expanded;
+                            const currentComment = ackState[c._id]?.comment ?? '';
+                            const isSubmitting = ackState[c._id]?.submitting;
 
-                                {adminView && (
-                                    <td style={{ padding: '10px' }}>
-                                        {c.user_id?.name || 'Unknown User'}<br />
-                                        <small>{c.user_id?.phone || ''}</small>
-                                    </td>
-                                )}
+                            return (
+                                <React.Fragment key={c._id}>
+                                    <tr style={{ borderBottom: c.is_acknowledged ? '1px solid #c8e6c9' : '1px solid #eee', background: c.is_acknowledged ? '#f9fff9' : 'white' }}>
+                                        <td style={{ padding: '10px' }}>{new Date(c.timestamp).toLocaleDateString()}</td>
 
-                                <td style={{ padding: '10px' }}>
-                                    {c.product_id?.product_name || 'Unknown'}<br />
-                                    <small>{c.product_id?.brand || ''}</small>
-                                </td>
+                                        {adminView && (
+                                            <td style={{ padding: '10px' }}>
+                                                {c.user_id?.name || 'Unknown User'}<br />
+                                                <small>{c.user_id?.phone || ''}</small>
+                                            </td>
+                                        )}
 
-                                <td style={{ padding: '10px', textTransform: 'capitalize' }}>
-                                    {c.feedback_type} <br />
-                                    <small style={{ color: '#666' }}>Cat: {c.complaint_category}</small> <br />
-                                    <small style={{ color: c.rating >= 4 ? '#2E7D32' : c.rating >= 3 ? '#FF9800' : '#d32f2f', fontWeight: 'bold' }}>Rating: {c.rating} ★</small>
-                                </td>
+                                        <td style={{ padding: '10px' }}>
+                                            {c.product_id?.product_name || 'Unknown'}<br />
+                                            <small>{c.product_id?.brand || ''}</small>
+                                        </td>
 
-                                <td style={{ padding: '10px' }}>
-                                    <strong>{c.review_title || ''}</strong><br />
-                                    {c.feedback_text}
-                                    {c.image_attachment && (
-                                        <>
-                                            <br />
-                                            <a href={import.meta.env.PROD ? c.image_attachment : `http://localhost:5000${c.image_attachment}`} target="_blank" rel="noreferrer">
-                                                🖼️ View Image
-                                            </a>
-                                        </>
+                                        <td style={{ padding: '10px', textTransform: 'capitalize' }}>
+                                            {c.feedback_type} <br />
+                                            <small style={{ color: '#666' }}>Cat: {c.complaint_category}</small> <br />
+                                            <small style={{ color: c.rating >= 4 ? '#2E7D32' : c.rating >= 3 ? '#FF9800' : '#d32f2f', fontWeight: 'bold' }}>Rating: {c.rating} ★</small>
+                                        </td>
+
+                                        <td style={{ padding: '10px' }}>
+                                            <strong>{c.review_title || ''}</strong><br />
+                                            {c.feedback_text}
+                                            {c.image_attachment && (
+                                                <>
+                                                    <br />
+                                                    <a href={import.meta.env.PROD ? c.image_attachment : `http://localhost:5000${c.image_attachment}`} target="_blank" rel="noreferrer">
+                                                        🖼️ View Image
+                                                    </a>
+                                                </>
+                                            )}
+                                        </td>
+
+                                        {/* Acknowledgement column */}
+                                        <td style={{ padding: '10px', minWidth: '160px' }}>
+                                            {c.is_acknowledged ? (
+                                                <div>
+                                                    <span style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                        padding: '3px 10px', borderRadius: '12px', fontSize: '0.78rem',
+                                                        background: '#c8e6c9', color: '#1b5e20', fontWeight: 'bold'
+                                                    }}>
+                                                        ✅ Acknowledged
+                                                    </span>
+                                                    {c.acknowledged_at && (
+                                                        <div style={{ fontSize: '0.75rem', color: '#555', marginTop: '3px' }}>
+                                                            {new Date(c.acknowledged_at).toLocaleDateString()}
+                                                        </div>
+                                                    )}
+                                                    {c.admin_comment && (
+                                                        <div style={{
+                                                            marginTop: '6px', padding: '7px 10px',
+                                                            background: '#e8f5e9', borderLeft: '3px solid #2e7d32',
+                                                            borderRadius: '4px', fontSize: '0.82rem', color: '#1b5e20'
+                                                        }}>
+                                                            <strong>Admin:</strong> {c.admin_comment}
+                                                        </div>
+                                                    )}
+                                                    {/* Admin can update comment even after acknowledging */}
+                                                    {adminView && (
+                                                        <button
+                                                            onClick={() => toggleAckPanel(c._id)}
+                                                            style={{
+                                                                marginTop: '6px', fontSize: '0.75rem', padding: '3px 8px',
+                                                                background: 'transparent', border: '1px solid #2e7d32',
+                                                                borderRadius: '4px', cursor: 'pointer', color: '#2e7d32'
+                                                            }}
+                                                        >
+                                                            ✏️ Update Comment
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <span style={{
+                                                        display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                                        padding: '3px 10px', borderRadius: '12px', fontSize: '0.78rem',
+                                                        background: '#fff3e0', color: '#e65100', fontWeight: 'bold'
+                                                    }}>
+                                                        ⏳ Pending
+                                                    </span>
+                                                    {adminView && (
+                                                        <button
+                                                            onClick={() => toggleAckPanel(c._id)}
+                                                            style={{
+                                                                display: 'block', marginTop: '6px', fontSize: '0.8rem',
+                                                                padding: '4px 10px', background: 'var(--primary-color)',
+                                                                color: 'white', border: 'none', borderRadius: '4px',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            Acknowledge
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+
+                                    {/* Collapsible acknowledge panel (admin only) */}
+                                    {adminView && isExpanded && (
+                                        <tr style={{ background: '#f1f8e9' }}>
+                                            <td colSpan={colCount} style={{ padding: '12px 16px' }}>
+                                                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                                    <textarea
+                                                        rows={2}
+                                                        placeholder="Add a comment for the farmer (optional)..."
+                                                        value={currentComment}
+                                                        onChange={(e) => setAckState(prev => ({
+                                                            ...prev,
+                                                            [c._id]: { ...prev[c._id], comment: e.target.value }
+                                                        }))}
+                                                        style={{
+                                                            flex: '1', minWidth: '250px', padding: '8px',
+                                                            borderRadius: '5px', border: '1px solid #a5d6a7',
+                                                            resize: 'vertical', fontFamily: 'inherit', fontSize: '0.9rem'
+                                                        }}
+                                                    />
+                                                    <div style={{ display: 'flex', gap: '6px', flexDirection: 'column' }}>
+                                                        <button
+                                                            onClick={() => handleAcknowledge(c._id)}
+                                                            disabled={isSubmitting}
+                                                            style={{
+                                                                padding: '7px 18px', background: '#2e7d32', color: 'white',
+                                                                border: 'none', borderRadius: '5px', cursor: 'pointer',
+                                                                fontWeight: 'bold', opacity: isSubmitting ? 0.6 : 1
+                                                            }}
+                                                        >
+                                                            {isSubmitting ? 'Saving...' : c.is_acknowledged ? '✅ Update' : '✅ Acknowledge'}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => toggleAckPanel(c._id)}
+                                                            style={{
+                                                                padding: '5px 14px', background: 'transparent',
+                                                                border: '1px solid #aaa', borderRadius: '5px',
+                                                                cursor: 'pointer', fontSize: '0.85rem'
+                                                            }}
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
                                     )}
-                                </td>
-                            </tr>
-                        ))}
+                                </React.Fragment>
+                            );
+                        })}
                         {currentItems.length === 0 && (
                             <tr>
-                                <td colSpan={adminView ? 5 : 4} style={{ textAlign: 'center', padding: '15px' }}>
+                                <td colSpan={colCount} style={{ textAlign: 'center', padding: '15px' }}>
                                     No reviews found.
                                 </td>
                             </tr>
